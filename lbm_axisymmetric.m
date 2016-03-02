@@ -52,9 +52,10 @@ visc_phy = visc*(Dx^2)/Dt;                        % physical kinematic viscosity
 %% Lattice properties for the D2Q9 model
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-N_c=9 ;                                             % number of directions of the D2Q9 model
-C_x=[1 0 -1  0 1 -1 -1  1 0];                       % velocity vectors in x
-C_y=[0 1  0 -1 1  1 -1 -1 0];                       % velocity vectors in y
+N_c = 9;                                             % number of directions of the D2Q9 model
+% alpha = 0,1,2,3,4,5,6,7,8
+C_x = [0 1 1 0 -1 -1 -1  0 1];                       % velocity vectors in x
+C_y = [0 0 1 1 1 0 -1 -1 -1];                       % velocity vectors in y
 w0=16/36. ; w1=4/36. ; w2=1/36.;                    % lattice weights
 W = [w1 w1 w1 w1 w2 w2 w2 w2 w0];
 f1=3.;
