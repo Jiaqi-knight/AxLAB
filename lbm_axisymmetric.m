@@ -42,6 +42,7 @@ omega = 1.9;                                      % Relaxation frequency
 tau = 1/omega;                                    % Relaxation time
 rho_l = 1;                                        % avereged fluid density (latice density
 cs = 1/sqrt(3);                                   % lattice speed of sound
+e = 1/sqrt(3);                                   % lattice speed of sound
 cs2 = cs^2;                                       % Squared speed of sound cl^2
 visc = cs2*(1/omega-0.5);                         % lattice viscosity
 visc_phy = visc*(Dx^2)/Dt;                        % physical kinematic viscosity
@@ -50,6 +51,30 @@ visc_phy = visc*(Dx^2)/Dt;                        % physical kinematic viscosity
 % Array of distribution and relaxation functions
 f=zeros(Nr,Mc,N_c);                                 
 feq=zeros(Nr,Mc,N_c);
+w0 = 4/9.;
+w1 = 1/9.;
+w2 = 1/36.;
+w_alpha = [w1 w2 w1 w2 w1 w2 w1 w2 w0];
+% constants velocities (link and cy, cx)
+e_alpha(9, 2) = 0;
+for link = 1:8
+    if mod(link,2) == 1
+        lambda_alpha = 1;
+        % in y
+        e_alpha(link, 1) = lambda_alpha*e*(sin((link-1)*pi/4));
+        % in x
+        e_alpha(link, 2) = lambda_alpha*e*(cos((link-1)*pi/4));
+    elseif mod(link,2) == 0
+        lambda_alpha = sqrt(2);
+        % in y
+        e_alpha(link, 1) = lambda_alpha*e*(sin((link-1)*pi/4));
+        % in x
+        e_alpha(link, 2) = lambda_alpha*e*(cos((link-1)*pi/4));
+    end
+end
+% constant K
+K = sum(e_alpha(:,1).^2)/cs2;
+
 
 % Filling the initial distribution function (at t=0) with initial values
 f(:,:,:)=rho_l/9;   
@@ -91,17 +116,14 @@ for ta = 1 : round(150*sqrt(3))
         f(150 - 20: 150 + 20, 150 - 20: 150 + 20, :) = rho_p;
     end
     rho=sum(f,3); 
-    
 
-        
-    %rt0= w0*rho;
-    %rt1= w1*rho;
-    %rt2= w2*rho;
-
-    % Determining the velocities according to Eq.() (see slides)    
-    %ux = (C_x(1).*f(:,:,1)+C_x(2).*f(:,:,2)+C_x(3).*f(:,:,3)+C_x(4).*f(:,:,4)+C_x(5).*f(:,:,5)+C_x(6).*f(:,:,6)+C_x(7).*f(:,:,7)+C_x(8).*f(:,:,8))./rho ;
-    %uy = (C_y(1).*f(:,:,1)+C_y(2).*f(:,:,2)+C_y(3).*f(:,:,3)+C_y(4).*f(:,:,4)+C_y(5).*f(:,:,5)+C_y(6).*f(:,:,6)+C_y(7).*f(:,:,7)+C_y(8).*f(:,:,8))./rho ;
-        
+    % Determining the velocities according to Eq.() (see slides)
+    ux = (e_alpha(1,2).*f(:,:,1)+e_alpha(2,2).*f(:,:,2)+e_alpha(3,2).*f(:,:,3)+...
+        e_alpha(4,2).*f(:,:,4)+e_alpha(5,2).*f(:,:,5)+e_alpha(6,2).*f(:,:,6)+...
+        e_alpha(7,2).*f(:,:,7)+e_alpha(8,2).*f(:,:,8))./rho;
+    uy = (e_alpha(1,1).*f(:,:,1)+e_alpha(2,1).*f(:,:,1)+e_alpha(3,1).*f(:,:,3)+...
+        e_alpha(4,1).*f(:,:,4)+e_alpha(5,1).*f(:,:,5)+e_alpha(6,1).*f(:,:,6)+...
+        e_alpha(7,1).*f(:,:,7)+e_alpha(8,1).*f(:,:,8))./rho;
 
     % Block 5.3
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -110,8 +132,9 @@ for ta = 1 : round(150*sqrt(3))
     %uxsq=ux.^2; 
     %uysq=uy.^2; 
     %usq=uxsq+uysq; 
-       
-    %feq(:,:,1)= rt1 .*(1 +f1*ux +f2.*uxsq -f3*usq);
+
+    C1 = e_alpha(1, 2)  ux; C2 = ux.^2; C3 = ux.^2+uy.^2
+    feq(:,:,1)= w_alpha(1)*rho .*(1 + 3*C1 + 4.5*C2 - 1.5*C3);
     %feq(:,:,2)= rt1 .*(1 +f1*uy +f2*uysq -f3*usq);
     %feq(:,:,3)= rt1 .*(1 -f1*ux +f2*uxsq -f3*usq);
     %feq(:,:,4)= rt1 .*(1 -f1*uy +f2*uysq -f3*usq);
