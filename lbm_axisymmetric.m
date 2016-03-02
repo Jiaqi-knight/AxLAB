@@ -133,7 +133,7 @@ for ta = 1 : round(150*sqrt(3))
     %uysq=uy.^2; 
     %usq=uxsq+uysq; 
 
-    C1 = e_alpha(1, 2)  ux; C2 = ux.^2; C3 = ux.^2+uy.^2
+    C1 = e_alpha(1,2)*ux/e; C2 = 0; C3 = ux.^2+uy.^2
     feq(:,:,1)= w_alpha(1)*rho .*(1 + 3*C1 + 4.5*C2 - 1.5*C3);
     %feq(:,:,2)= rt1 .*(1 +f1*uy +f2*uysq -f3*usq);
     %feq(:,:,3)= rt1 .*(1 -f1*ux +f2*uxsq -f3*usq);
