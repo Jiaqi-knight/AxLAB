@@ -89,17 +89,17 @@ for direc=1:8
 
         if direc ==1 
         disto = c-(l-B)/(A+eps);
-        elseif direc == 3
-            disto = c-(l-B)/(A+eps);
-        elseif direc == 2
-            disto = l-(A*c+B);
-        elseif direc == 4
-            disto = l-(A*c+B);
         elseif direc == 5
+            disto = c-(l-B)/(A+eps);
+        elseif direc == 3
+            disto = l-(A*c+B);
+        elseif direc == 7
+            disto = l-(A*c+B);
+        elseif direc == 2
             dx = c-(B-l+c)/(1-A);
             dy = l-(A*(l-c)-B)/(A-1);
             disto = sqrt(dx.^2+dy.^2)/norma;
-        elseif direc == 7
+        elseif direc == 6
             dx = c-(B-l+c)/(1-A);
             dy = l-(A*(l-c)-B)/(A-1);
             disto = sqrt(dx.^2+dy.^2)/norma;
@@ -107,7 +107,7 @@ for direc=1:8
             dx = c-(B-l-c)/(-A-1);
             dy = l-(A*l+A*c+B)/(1+A);
             disto = sqrt(dx.^2+dy.^2)/norma;
-        elseif direc == 6
+        elseif direc == 4
             dx = c-(B-l-c)/(-A-1);
             dy = l-(A*l+A*c+B)/(1+A);
             disto = sqrt(dx.^2+dy.^2)/norma;
