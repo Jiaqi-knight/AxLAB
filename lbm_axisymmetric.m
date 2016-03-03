@@ -103,8 +103,8 @@ ux(Nr, Mc) = eps;
 uy(Nr, Mc) = eps;
 
 % set wall
-xl = [(150-30) (150-30) (150+30) (150+30) (150-30)];
-yl = [(150+30) (150-30) (150-30) (150+30) (150+30)];
+xl = [(150-70) (150-70) (150+70) (150+70) (150-70)];
+yl = [(150+70) (150-70) (150-70) (150+70) (150+70)];
 [vec1,vec2,vec3,vec4,vec5,vec6,vec7,vec8] = crossing3_axis(Nr,Mc,xl,yl);
 %Block 5
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -214,7 +214,7 @@ for ta = 1 : 10000
         
     % Ploting the results in real time   
     %surf(rho-1), view(2), shading flat, axis equal, caxis([-.00001 .00001])
-    imagesc(rho-1, [-.00001 .00001]); axis equal;
+    imagesc(rho-1); axis equal;
     grid off
     pause(.0001)
     ta
