@@ -102,6 +102,10 @@ f(:,:,:)=rho_l/9;
 ux(Nr, Mc) = eps;
 uy(Nr, Mc) = eps;
 
+% set wall
+xl = [(150-30) (150-30) (150+30) (150+30) (150-30)];
+yl = [(150+30) (150-30) (150-30) (150+30) (150+30)];
+[vec1,vec2,vec3,vec4,vec5,vec6,vec7,vec8] = crossing3_axis(Nr,Mc,xl,yl);
 %Block 5
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Begin the iteractive process
@@ -128,11 +132,24 @@ for ta = 1 : 10000
     f(:,:,8) = [f(:,1:2,8) f(:,2:Mc-1,8)];
     f(:,:,8) = [f(2:Nr-1,:,8);f(Nr-1:Nr,:,8)];
 
+    if ta >= 2000
+        % set bounce backs
+        G=f;
+        f(vec1)=G(vec5);
+        f(vec5)=G(vec1);
+        f(vec2)=G(vec6);
+        f(vec6)=G(vec2);
+        f(vec3)=G(vec7);
+        f(vec7)=G(vec3);
+        f(vec4)=G(vec8);
+        f(vec8)=G(vec4);
+    end
+
     % Block 5.2
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % recalculating rho and u
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if ta == 1
+    if ta == 2050
        f(150, 150, 9) = rho_p;
     end
     rho=sum(f,3);
@@ -196,8 +213,8 @@ for ta = 1 : 10000
 
         
     % Ploting the results in real time   
-    surf(rho-1), view(2), shading flat, axis equal, caxis([-.00001 .00001])
-    %imagesc(rho)
+    %surf(rho-1), view(2), shading flat, axis equal, caxis([-.00001 .00001])
+    imagesc(rho-1, [-.00001 .00001]); axis equal;
     grid off
     pause(.0001)
     ta
