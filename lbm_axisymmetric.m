@@ -16,8 +16,8 @@ close all
 %%% Lattice size
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Nr = 300;                    % Number of lines   (cells in the y direction)
-Mc = 300;                    % Number of columns (cells in the x direction)
+Nr = 250*2+1;                    % Number of lines   (cells in the y direction)
+Mc = 500*2+2;                    % Number of columns (cells in the x direction)
 N_c = 9;
 
 % Block 2
@@ -133,14 +133,24 @@ Nr, distance, growth_delta, e, e_alpha, w_alpha);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construindo chirp
 a=40;
-total_time = 2000; % meia hora = 20*Mc*sqrt(3)
+total_time = round(10*Mc*sqrt(3)); % meia hora = 20*Mc*sqrt(3)
 times = 0 : total_time - 1;
-initial_frequency = 4*cs/(2*pi*a);
+initial_frequency = 0;
 frequency_max_lattice = 4*cs/(2*pi*a);
 source_chirp = chirp(times, ... 
 initial_frequency, times(end), frequency_max_lattice);
 % probe to verify
 probe_verify(1:total_time) = 0; 
+
+% vetores de pressao e velocidade de particula
+pressure1(1:total_time) = 0;
+pressure2(1:total_time) = 0;
+pressure3(1:total_time) = 0;
+pressure4(1:total_time) = 0;
+particle_velocity1(1:total_time) = 0;
+particle_velocity2(1:total_time) = 0;
+particle_velocity3(1:total_time) = 0;
+particle_velocity4(1:total_time) = 0;
 for ta = 1 : total_time
     
     % Block 5.1
@@ -165,14 +175,14 @@ for ta = 1 : total_time
     if ta >= 1
         % set bounce backs
         G=f;
-        %f(vec1)=G(vec5);
-        %f(vec5)=G(vec1);
-        %f(vec2)=G(vec6);
-        %f(vec6)=G(vec2);
-        %f(vec3)=G(vec7);
-        %f(vec7)=G(vec3);
-        %f(vec4)=G(vec8);
-        %f(vec8)=G(vec4);
+        f(vec1)=G(vec5);
+        f(vec5)=G(vec1);
+        f(vec2)=G(vec6);
+        f(vec6)=G(vec2);
+        f(vec3)=G(vec7);
+        f(vec7)=G(vec3);
+        f(vec4)=G(vec8);
+        f(vec8)=G(vec4);
     end
 
     % Block 5.2
@@ -183,7 +193,6 @@ for ta = 1 : total_time
        %f(150, 150, 9) = rho_p;
     end
     rho=sum(f,3);
-    probe_verify(ta) = rho(round(Nr/2), round(Mc/2));
 
     %% Calculando uma fonte ABC dentro do duto
     % direita = 0.5
@@ -250,7 +259,7 @@ for ta = 1 : total_time
         term_force(2:end,:) = e_alpha(link, 2).*(-(rho(2:end,:).*ux(2:end,:).*uy(2:end,:))./radius(2:end,:)) ...
          + e_alpha(link, 1).*(-((rho(2:end,:).*uy(2:end,:).^2)./radius(2:end,:)) - 2.*rho(2:end,:).*visc.*uy(2:end,:)./radius(2:end,:).^2);
         
-         if ta <= 200
+         if ta <= Nr*sqrt(3)
              f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + omega_alpha(:,:,link).*feq(:,:,link) ...
          + w_alpha(link)*teta + term_force./K*(e^2) ...
          - sigma_mat9_cima_kill(:,:,link).*(feq(:,:,link) - Ft_cima_kill(:,:,link)) ...
@@ -263,7 +272,7 @@ for ta = 1 : total_time
              - sigma_mat9_cima(:,:,link).*(feq(:,:,link) - Ft_cima(:,:,link)) ...
              - sigma_mat9_esquerda(:,:,link).*(feq(:,:,link) - Ft_esquerda(:,:,link)) ...
              - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link)); ... 
-             %- sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link));
+             - sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link));
          end
         
          %mean(mean(w_alpha(link)*teta))
@@ -273,13 +282,96 @@ for ta = 1 : total_time
     % Ploting the results in real time   
     %surf(rho-1), view(2), shading flat, axis equal, caxis([-.00001 .00001])
     if mod(ta, 100) == 0
-        imagesc(rho-1); axis equal;
+        imagesc(flip(rho-1)); axis equal;
         grid off
         pause(.0001)
         disp('Progresso: ');
         disp((ta/total_time*100));
     end
+
+     %% Acquisition Data
     
+    x_probe=170; y_probe=35;
+    % Face data
+    
+    pressure1(ta) = (mean(rho(2:40, x_probe)-1))*cs2;
+    particle_velocity1(ta) = mean(ux(2:40, x_probe));
+    
+    particle_velocity3(ta) = ux(y_probe, 228);
+    pressure3(ta) = (rho(y_probe, 228)-1)*cs2;
+
+    particle_velocity4(ta) = ux(y_probe, 230);
+    pressure4(ta) = (rho(y_probe, 230)-1)*cs2;
+    % point data
+    
+    particle_velocity2(ta) = ux(y_probe, x_probe);
+    pressure2(ta) = (rho(y_probe, x_probe)-1)*cs2;
     
 
 end %  End main time Evolution Loop
+
+% Postprocessing
+
+% Radiation
+fft_pressure = fft(pressure1);
+fft_particle_velocity = fft(particle_velocity1);
+ZL = fft_pressure./fft_particle_velocity;
+ka_max = (2*pi*a)/cs;
+ka = linspace(0, ka_max, length(fft_pressure));
+
+L=55; 
+Zo = rho_p*cs;
+Zr = Zo*1i*tan(atan(ZL./(1i*Zo))-(ka/a)*L);
+Rr=(Zr-Zo)./(Zr+Zo);
+%la=(-1/(2*1i*(ka/a))).*log(Rr/abs(Rr));
+%% Radiation impedance
+open impe.fig
+hold on
+plot(ka,real(Zr),'--blue')
+hold on
+plot(ka,imag(Zr),'--red')
+axis([0 3 0 1]);
+ylabel('Imped\E2ncia, Zr','FontSize',20);
+xlabel('Numero de Helmholtz, ka','FontSize',20);
+legend('Real(Analitico)', 'Imaginaria(Analitico)','Real(LBM)', 'Imaginaria(LBM)');
+hold off
+
+%% Refletion Coeff. 
+open abs_r.fig
+hold on
+plot(ka,abs(Rr))
+axis([0 3 0 1]);
+ylabel('Coeficiente de Reflex\E3o, Rr','FontSize',20);
+xlabel('Numero de Helmholtz, ka','FontSize',20);
+legend('Analitico','LBM');
+hold off
+
+% End duct
+
+%% Radiation impedance end plane
+% fft_pressure = fft(pressure3);
+% fft_particle_velocity = fft(particle_velocity3);
+% Z_end = fft_pressure./fft_particle_velocity;
+% R_end=(Z_end+Zo)./(Z_end+Zo);
+% 
+% open impe.fig
+% %max_normalization = max([max(abs(real(Zr))) max(abs(real(Zr)))]);
+% hold on
+% plot(ka,real(Z_end),'--blue')
+% hold on
+% plot(ka,imag(Z_end),'--red')
+% axis([0 3 0 1]);
+% ylabel('Imped\E2ncia, Z_end','FontSize',20);
+% xlabel('Numero de Helmholtz, ka','FontSize',20);
+% legend('Real(Analitico)', 'Imaginaria(Analitico)','Real(LBM)', 'Imaginaria(LBM)');
+% hold off
+% 
+% %%
+% open abs_r.fig
+% hold on
+% plot(ka,abs(R_end))
+% axis([0 3 0 1]);
+% ylabel('Coeficiente de Reflex\E3o, Rr','FontSize',20);
+% xlabel('Numero de Helmholtz, ka','FontSize',20);
+% legend('Analitico','LBM');
+% hold off
