@@ -106,12 +106,35 @@ uy(Nr, Mc) = eps;
 xl = [(150-100) (150-100) (150+100) (150+100) (150-100)];
 yl = [(150+100) (150-100) (150-100) (150+100) (150+100)];
 [vec1,vec2,vec3,vec4,vec5,vec6,vec7,vec8] = crossing3_axis(Nr,Mc,xl,yl);
+
+% 4.0.1 - Adding conditions anechoic
+distance = 30;
+% condicao anecoica para cima
+growth_delta = 0.5;
+[sigma_mat9_cima Ft_cima] = build_anechoic_condition_axis(Mc, ... 
+Nr, distance, growth_delta, e, e_alpha, w_alpha);
+% condicao anecoica para esquerda
+growth_delta = -1;
+[sigma_mat9_esquerda Ft_esquerda] = build_anechoic_condition_axis(Mc, ... 
+Nr, distance, growth_delta, e, e_alpha, w_alpha);
+% condicao anecoica para direita
+growth_delta = 1;
+[sigma_mat9_direito Ft_direito] = build_anechoic_condition_axis(Mc, ... 
+Nr, distance, growth_delta, e, e_alpha, w_alpha);
+
 %Block 5
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Begin the iteractive process
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-for ta = 1 : 10000
+% Construindo chirp
+a=40;
+total_time = 10000; % meia hora = 20*Mc*sqrt(3)
+times = 0 : total_time - 1;
+initial_frequency = 4*cs/(2*pi*a);
+frequency_max_lattice = 4*cs/(2*pi*a);
+source_chirp = chirp(times, ... 
+initial_frequency, times(end), frequency_max_lattice);
+for ta = 1 : total_time
     
     % Block 5.1
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -132,27 +155,41 @@ for ta = 1 : 10000
     f(:,:,8) = [f(:,1:2,8) f(:,2:Mc-1,8)];
     f(:,:,8) = [f(2:Nr-1,:,8);f(Nr-1:Nr,:,8)];
 
-    if ta >= 2000
+    if ta >= 2100
         % set bounce backs
-        G=f;
-        f(vec1)=G(vec5);
-        f(vec5)=G(vec1);
-        f(vec2)=G(vec6);
-        f(vec6)=G(vec2);
-        f(vec3)=G(vec7);
-        f(vec7)=G(vec3);
-        f(vec4)=G(vec8);
-        f(vec8)=G(vec4);
+        %G=f;
+        %f(vec1)=G(vec5);
+        %f(vec5)=G(vec1);
+        %f(vec2)=G(vec6);
+        %f(vec6)=G(vec2);
+        %f(vec3)=G(vec7);
+        %f(vec7)=G(vec3);
+        %f(vec4)=G(vec8);
+        %f(vec8)=G(vec4);
     end
 
     % Block 5.2
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % recalculating rho and u
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if ta == 2050
-       f(150, 150, 9) = rho_p;
+    if ta == 2120
+       %f(150, 150, 9) = rho_p;
     end
     rho=sum(f,3);
+
+    %% Calculando uma fonte ABC dentro do duto
+    % direita = 0.5
+    density_source = rho_l + 0.1*source_chirp(ta);
+    Ux_t = 0; %(0.0001*source_chirp(ta))/sqrt(3) + 0.1*e;
+    Uy_t = 0;%(0.0001*source_chirp(ta))/sqrt(3) + 0.1*e;
+    point_y = 1;
+    distance_y = 39;
+    point_x = 30;
+    distance_x = 30;
+    direction = 0.5;
+    [sigma_source Ft_source] = build_source_anechoic_axis(Nr, Mc, ...
+    density_source, Ux_t, Uy_t, point_y, ...
+    point_x, distance_x, distance_y, direction, e, e_alpha, w_alpha);
 
     % Determining the velocities according to Eq.() (see slides)
     a1 = e_alpha(1,2)*f(:,:,1);
@@ -206,15 +243,19 @@ for ta = 1 : 10000
          + e_alpha(link, 1).*(-((rho(2:end,:).*uy(2:end,:).^2)./radius(2:end,:)) - 2.*rho(2:end,:).*visc.*uy(2:end,:)./radius(2:end,:).^2);
         
         % collide itself
-        f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + ...
-         omega_alpha(:,:,link).*feq(:,:,link) + w_alpha(link)*teta + term_force./K*(e^2); 
+        f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + omega_alpha(:,:,link).*feq(:,:,link) ...
+         + w_alpha(link)*teta + term_force./K*(e^2) ...
+         - sigma_mat9_cima(:,:,link).*(feq(:,:,link) - Ft_cima(:,:,link)) ...
+         - sigma_mat9_esquerda(:,:,link).*(feq(:,:,link) - Ft_esquerda(:,:,link)) ...
+         - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link)) ... 
+         - sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link)); 
          %mean(mean(w_alpha(link)*teta))
     end
 
         
     % Ploting the results in real time   
     %surf(rho-1), view(2), shading flat, axis equal, caxis([-.00001 .00001])
-    imagesc(rho-1); axis equal;
+    imagesc(rho-1, [-.01 .01]); axis equal;
     grid off
     pause(.0001)
     ta

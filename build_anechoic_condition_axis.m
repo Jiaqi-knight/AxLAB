@@ -1,30 +1,27 @@
 %% build_anechoic_condition: function description
-function [sigma_mat9 Ft] = build_anechoic_condition(number_lines_lattice, ... 
-number_columns_lattice, distance, growth_delta)
+function [sigma_mat9 Ft] = build_anechoic_condition_axis(number_lines_lattice, ... 
+number_columns_lattice, distance, growth_delta, e, e_alpha, w_alpha)
 
-	lattice_sound_speed = 1/sqrt(3);
-	lattice_sound_speed_pow_2 = lattice_sound_speed^2;
-	w1=4/9;     % centro    %pesos de relaxacao devido ao D2Q9 (pg.20)
-	w2=1/9;     % ortogonais        
-	w3=1/36;    % diagonais
-	coef1=  1/(2*lattice_sound_speed_pow_2^2); %para uso na relaxacao
-	coef2= -1/(2*lattice_sound_speed_pow_2);
 	% funcoes distribuicao (Eq. 1.46)
 	Ft = zeros(number_lines_lattice,number_columns_lattice,9);
 	%funcoes target
-	Ux_t=0;
-	Uy_t=0;
-	U_t=Ux_t^2+Uy_t^2;
+	ux=0;
+	uy=0;
 	densi_t = 1;
-	Ft(:,:,9)= w1*densi_t.*(1+coef2*U_t);
-	Ft(:,:,1)= w2*densi_t.*(1 +Ux_t/lattice_sound_speed_pow_2 +coef1*(Ux_t.^2 )+coef2*U_t);
-	Ft(:,:,2)= w2*densi_t.*(1 +Uy_t/lattice_sound_speed_pow_2 +coef1*(Uy_t.^2 ) +coef2*U_t);
-	Ft(:,:,3)= w2*densi_t.*(1 -Ux_t/lattice_sound_speed_pow_2 +coef1*(Ux_t.^2 )+coef2*U_t);
-	Ft(:,:,4)= w2*densi_t.*(1 -Uy_t/lattice_sound_speed_pow_2 +coef1*(Uy_t.^2) +coef2*U_t);
-	Ft(:,:,5)= w3*densi_t.*(1 +(+Ux_t+Uy_t)/lattice_sound_speed_pow_2 +coef1*((+Ux_t+Uy_t).^2) +coef2*U_t);
-	Ft(:,:,6)= w3*densi_t.*(1 +(-Ux_t+Uy_t)/lattice_sound_speed_pow_2 +coef1*((-Ux_t+Uy_t).^2) +coef2*U_t);
-	Ft(:,:,7)= w3*densi_t.*(1 +(-Ux_t-Uy_t)/lattice_sound_speed_pow_2 +coef1*((-Ux_t-Uy_t).^2) +coef2*U_t);
-	Ft(:,:,8)= w3*densi_t.*(1 +(+Ux_t-Uy_t)/lattice_sound_speed_pow_2 +coef1*((+Ux_t-Uy_t).^2) +coef2*U_t);
+	
+    for link = 1:9
+        c1 = 3/(e^2);
+        C1 = e_alpha(link,2)*ux + e_alpha(link,1)*uy;
+        c2 = 9/(2*e^4);
+        C2 = (e_alpha(link,2)^2)*(ux.^2) + 2*e_alpha(link,1)*e_alpha(link,2)*uy.*ux ...
+        + (e_alpha(link,1)^2)*(uy.^2);
+        c3 = 3/(2*e^2);
+        C3 = ux.^2 + uy.^2;
+        Ft(:,:,link)= w_alpha(link)*densi_t .*(1 + c1*C1 + c2*C2 - c3*C3);
+        %mean(mean(feq(:,:,link)))
+        %link
+    end
+
 	% 
 	D_t = distance;  % em numero de celulas
 	sigma_t = 0.3;
