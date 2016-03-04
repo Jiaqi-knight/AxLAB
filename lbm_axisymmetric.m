@@ -132,9 +132,10 @@ Nr, distance, growth_delta, e, e_alpha, w_alpha);
 %% Begin the iteractive process
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construindo chirp
+time_transient = Nr*sqrt(3);
 a=40;
 total_time = round(10*Mc*sqrt(3)); % meia hora = 20*Mc*sqrt(3)
-times = 0 : total_time - 1;
+times = time_transient : total_time - 1;
 initial_frequency = 0;
 frequency_max_lattice = 4*cs/(2*pi*a);
 source_chirp = chirp(times, ... 
@@ -143,14 +144,14 @@ initial_frequency, times(end), frequency_max_lattice);
 probe_verify(1:total_time) = 0; 
 
 % vetores de pressao e velocidade de particula
-pressure1(1:total_time) = 0;
-pressure2(1:total_time) = 0;
-pressure3(1:total_time) = 0;
-pressure4(1:total_time) = 0;
-particle_velocity1(1:total_time) = 0;
-particle_velocity2(1:total_time) = 0;
-particle_velocity3(1:total_time) = 0;
-particle_velocity4(1:total_time) = 0;
+pressure1(1:length(times)) = 0;
+pressure2(1:length(times)) = 0;
+pressure3(1:length(times)) = 0;
+pressure4(1:length(times)) = 0;
+particle_velocity1(1:length(times)) = 0;
+particle_velocity2(1:length(times)) = 0;
+particle_velocity3(1:length(times)) = 0;
+particle_velocity4(1:length(times)) = 0;
 for ta = 1 : total_time
     
     % Block 5.1
@@ -172,7 +173,7 @@ for ta = 1 : total_time
     f(:,:,8) = [f(:,1:2,8) f(:,2:Mc-1,8)];
     f(:,:,8) = [f(2:Nr-1,:,8);f(Nr-1:Nr,:,8)];
 
-    if ta >= 1
+    if ta >= time_transient
         % set bounce backs
         G=f;
         f(vec1)=G(vec5);
@@ -259,7 +260,7 @@ for ta = 1 : total_time
         term_force(2:end,:) = e_alpha(link, 2).*(-(rho(2:end,:).*ux(2:end,:).*uy(2:end,:))./radius(2:end,:)) ...
          + e_alpha(link, 1).*(-((rho(2:end,:).*uy(2:end,:).^2)./radius(2:end,:)) - 2.*rho(2:end,:).*visc.*uy(2:end,:)./radius(2:end,:).^2);
         
-         if ta <= Nr*sqrt(3)
+         if ta <= time_transient
              f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + omega_alpha(:,:,link).*feq(:,:,link) ...
          + w_alpha(link)*teta + term_force./K*(e^2) ...
          - sigma_mat9_cima_kill(:,:,link).*(feq(:,:,link) - Ft_cima_kill(:,:,link)) ...
@@ -295,6 +296,8 @@ for ta = 1 : total_time
     % Face data
     
     pressure1(ta) = (mean(rho(2:40, x_probe)-1))*cs2;
+    pressure1 = pressure1(Nr*sqrt(3) + 1:end);
+
     particle_velocity1(ta) = mean(ux(2:40, x_probe));
     
     particle_velocity3(ta) = ux(y_probe, 228);
