@@ -16,8 +16,8 @@ close all
 %%% Lattice size
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Nr = 300;                    % Number of lines   (cells in the y direction)
-Mc = 300;                    % Number of columns (cells in the x direction)
+Nr = 250*2+1;                    % Number of lines   (cells in the y direction)
+Mc = 500*2+2;                    % Number of columns (cells in the x direction)
 N_c = 9;
 
 % Block 2
@@ -103,8 +103,10 @@ ux(Nr, Mc) = eps;
 uy(Nr, Mc) = eps;
 
 % set wall
-xl = [(150-100) (150-100) (150+100) (150+100) (150-100)];
-yl = [(150+100) (150-100) (150-100) (150+100) (150+100)];
+xl = [29 29 30+100*2];%Lt=230 voxel; Ltubo=200 voxel
+yl = [1 20*2+1 20*2+1];
+%xl = [(150-100) (150-100) (150+100) (150+100) (150-100)];
+%yl = [(150+100) (150-100) (150-100) (150+100) (150+100)];
 [vec1,vec2,vec3,vec4,vec5,vec6,vec7,vec8] = crossing3_axis(Nr,Mc,xl,yl);
 
 % 4.0.1 - Adding conditions anechoic
@@ -128,12 +130,14 @@ Nr, distance, growth_delta, e, e_alpha, w_alpha);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construindo chirp
 a=40;
-total_time = 10000; % meia hora = 20*Mc*sqrt(3)
+total_time = 5000; % meia hora = 20*Mc*sqrt(3)
 times = 0 : total_time - 1;
 initial_frequency = 4*cs/(2*pi*a);
 frequency_max_lattice = 4*cs/(2*pi*a);
 source_chirp = chirp(times, ... 
 initial_frequency, times(end), frequency_max_lattice);
+% probe to verify
+probe_verify(1:total_time) = 0; 
 for ta = 1 : total_time
     
     % Block 5.1
@@ -155,9 +159,9 @@ for ta = 1 : total_time
     f(:,:,8) = [f(:,1:2,8) f(:,2:Mc-1,8)];
     f(:,:,8) = [f(2:Nr-1,:,8);f(Nr-1:Nr,:,8)];
 
-    if ta >= 2100
+    if ta >= 1
         % set bounce backs
-        %G=f;
+        G=f;
         %f(vec1)=G(vec5);
         %f(vec5)=G(vec1);
         %f(vec2)=G(vec6);
@@ -176,6 +180,7 @@ for ta = 1 : total_time
        %f(150, 150, 9) = rho_p;
     end
     rho=sum(f,3);
+    probe_verify(ta) = rho(round(Nr/2), Mc/2);
 
     %% Calculando uma fonte ABC dentro do duto
     % direita = 0.5
@@ -247,17 +252,22 @@ for ta = 1 : total_time
          + w_alpha(link)*teta + term_force./K*(e^2) ...
          - sigma_mat9_cima(:,:,link).*(feq(:,:,link) - Ft_cima(:,:,link)) ...
          - sigma_mat9_esquerda(:,:,link).*(feq(:,:,link) - Ft_esquerda(:,:,link)) ...
-         - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link)) ... 
-         - sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link)); 
+         - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link)); ... 
+         %- sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link)); 
          %mean(mean(w_alpha(link)*teta))
     end
 
         
     % Ploting the results in real time   
     %surf(rho-1), view(2), shading flat, axis equal, caxis([-.00001 .00001])
-    imagesc(rho-1, [-.01 .01]); axis equal;
-    grid off
-    pause(.0001)
-    ta
+    if mod(ta, 100) == 0
+        imagesc(rho-1); axis equal;
+        grid off
+        pause(.0001)
+        disp('Progresso: ');
+        disp((ta/total_time*100));
+    end
+    
+    
 
 end %  End main time Evolution Loop
