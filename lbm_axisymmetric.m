@@ -16,8 +16,8 @@ close all
 %%% Lattice size
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Nr = 250*2+1;                    % Number of lines   (cells in the y direction)
-Mc = 500*2+2;                    % Number of columns (cells in the x direction)
+Nr = 300;                    % Number of lines   (cells in the y direction)
+Mc = 300;                    % Number of columns (cells in the x direction)
 N_c = 9;
 
 % Block 2
@@ -115,6 +115,9 @@ distance = 30;
 growth_delta = 0.5;
 [sigma_mat9_cima Ft_cima] = build_anechoic_condition_axis(Mc, ... 
 Nr, distance, growth_delta, e, e_alpha, w_alpha);
+growth_delta = 0.5;
+[sigma_mat9_cima_kill Ft_cima_kill] = build_anechoic_condition_axis(Mc, ... 
+Nr, Nr, growth_delta, e, e_alpha, w_alpha);
 % condicao anecoica para esquerda
 growth_delta = -1;
 [sigma_mat9_esquerda Ft_esquerda] = build_anechoic_condition_axis(Mc, ... 
@@ -130,7 +133,7 @@ Nr, distance, growth_delta, e, e_alpha, w_alpha);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construindo chirp
 a=40;
-total_time = 5000; % meia hora = 20*Mc*sqrt(3)
+total_time = 2000; % meia hora = 20*Mc*sqrt(3)
 times = 0 : total_time - 1;
 initial_frequency = 4*cs/(2*pi*a);
 frequency_max_lattice = 4*cs/(2*pi*a);
@@ -180,7 +183,7 @@ for ta = 1 : total_time
        %f(150, 150, 9) = rho_p;
     end
     rho=sum(f,3);
-    probe_verify(ta) = rho(round(Nr/2), Mc/2);
+    probe_verify(ta) = rho(round(Nr/2), round(Mc/2));
 
     %% Calculando uma fonte ABC dentro do duto
     % direita = 0.5
@@ -247,13 +250,22 @@ for ta = 1 : total_time
         term_force(2:end,:) = e_alpha(link, 2).*(-(rho(2:end,:).*ux(2:end,:).*uy(2:end,:))./radius(2:end,:)) ...
          + e_alpha(link, 1).*(-((rho(2:end,:).*uy(2:end,:).^2)./radius(2:end,:)) - 2.*rho(2:end,:).*visc.*uy(2:end,:)./radius(2:end,:).^2);
         
-        % collide itself
-        f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + omega_alpha(:,:,link).*feq(:,:,link) ...
+         if ta <= 200
+             f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + omega_alpha(:,:,link).*feq(:,:,link) ...
          + w_alpha(link)*teta + term_force./K*(e^2) ...
-         - sigma_mat9_cima(:,:,link).*(feq(:,:,link) - Ft_cima(:,:,link)) ...
+         - sigma_mat9_cima_kill(:,:,link).*(feq(:,:,link) - Ft_cima_kill(:,:,link)) ...
          - sigma_mat9_esquerda(:,:,link).*(feq(:,:,link) - Ft_esquerda(:,:,link)) ...
-         - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link)); ... 
-         %- sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link)); 
+         - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link));
+         else
+             % collide itself
+            f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + omega_alpha(:,:,link).*feq(:,:,link) ...
+             + w_alpha(link)*teta + term_force./K*(e^2) ...
+             - sigma_mat9_cima(:,:,link).*(feq(:,:,link) - Ft_cima(:,:,link)) ...
+             - sigma_mat9_esquerda(:,:,link).*(feq(:,:,link) - Ft_esquerda(:,:,link)) ...
+             - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link)); ... 
+             %- sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link));
+         end
+        
          %mean(mean(w_alpha(link)*teta))
     end
 
