@@ -16,8 +16,8 @@ close all
 %%% Lattice size
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Nr = 250*2+1;                    % Number of lines   (cells in the y direction)
-Mc = 500*2+2;                    % Number of columns (cells in the x direction)
+Nr = 300;                    % Number of lines   (cells in the y direction)
+Mc = 400;                    % Number of columns (cells in the x direction)
 N_c = 9;
 
 % Block 2
@@ -104,7 +104,8 @@ uy(Nr, Mc) = eps;
 
 % set wall
 size_pipe = (30+100*2);
-height_pipe = round((20*2+1));
+a = 40;
+height_pipe = round((a+1));
 xl = [29 29 size_pipe];%Lt=230 voxel; Ltubo=200 voxel
 yl = [1 height_pipe height_pipe];
 %xl = [(150-100) (150-100) (150+100) (150+100) (150-100)];
@@ -132,14 +133,18 @@ Nr, distance, growth_delta, e, e_alpha, w_alpha);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construindo chirp
 time_transient = round(Nr*sqrt(3));
-a=40;
 total_time = 4000; % meia hora = 20*Mc*sqrt(3)
-times = 0 : (total_time - time_transient) - 1;
-initial_frequency = 0;
-frequency_max_lattice = 4*cs/(2*pi*a);
-source_chirp = chirp(times, ... 
-initial_frequency, times(end), frequency_max_lattice);
-
+%times = 0 : (total_time - time_transient) - 1;
+%initial_frequency = 0;
+%frequency_max_lattice = 4*cs/(2*pi*a);
+%source_chirp = chirp(times, ... 
+%initial_frequency, times(end), frequency_max_lattice);
+% build impulse
+x = [31:40];
+rho_delta = 0.1;
+impulse_densities = (rho_l + rho_delta*(0.5 + 0.5*cos(2*pi*x/10 + pi)));
+impulse_velocities = ((rho_delta*cs/rho_l)*(0.5+0.5*cos(2*pi*x/10 + pi)));
+point_impulse = 1;
 % vetores de pressao e velocidade de particula
 pressure1(1:total_time) = 0;
 pressure2(1:total_time) = 0;
@@ -234,10 +239,11 @@ for ta = 1 : total_time
 
     %% Calculando uma fonte ABC dentro do duto
     % direita = 0.5
-    if ta == time_transient + 2
+    if ta >= time_transient + 2 && ta < time_transient + 2 + 10 
         rho_delta = 0.1;
-        density_source = (rho_l + rho_delta *1);%(0.5 + 0.5*cos(2*pi/10 + pi)));
-        Ux_t = ( (rho_delta*cs/rho_l)*1);%(0.5+0.5*cos(2*pi/10 + pi)));
+        density_source = impulse_densities(point_impulse);
+        Ux_t = impulse_velocities(point_impulse);
+        point_impulse = point_impulse + 1;
         disp('Putting pulse');
     else
         density_source = rho_l;
