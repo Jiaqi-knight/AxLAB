@@ -16,8 +16,8 @@ close all
 %%% Lattice size
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Nr = 300;                    % Number of lines   (cells in the y direction)
-Mc = 800;                    % Number of columns (cells in the x direction)
+Nr = 250*2+1;                    % Number of lines   (cells in the y direction)
+Mc = 500*2+2;                    % Number of columns (cells in the x direction)
 N_c = 9;
 
 % Block 2
@@ -103,8 +103,10 @@ ux(Nr, Mc) = eps;
 uy(Nr, Mc) = eps;
 
 % set wall
-xl = [29 29 30+100*2];%Lt=230 voxel; Ltubo=200 voxel
-yl = [1 20*2+1 20*2+1];
+size_pipe = (30+100*2);
+height_pipe = round((20*2+1));
+xl = [29 29 size_pipe];%Lt=230 voxel; Ltubo=200 voxel
+yl = [1 height_pipe height_pipe];
 %xl = [(150-100) (150-100) (150+100) (150+100) (150-100)];
 %yl = [(150+100) (150-100) (150-100) (150+100) (150+100)];
 [vec1,vec2,vec3,vec4,vec5,vec6,vec7,vec8] = crossing3_axis(Nr,Mc,xl,yl);
@@ -115,9 +117,6 @@ distance = 30;
 growth_delta = 0.5;
 [sigma_mat9_cima Ft_cima] = build_anechoic_condition_axis(Mc, ... 
 Nr, distance, growth_delta, e, e_alpha, w_alpha);
-growth_delta = 0.5;
-[sigma_mat9_cima_kill Ft_cima_kill] = build_anechoic_condition_axis(Mc, ... 
-Nr, Nr, growth_delta, e, e_alpha, w_alpha);
 % condicao anecoica para esquerda
 growth_delta = -1;
 [sigma_mat9_esquerda Ft_esquerda] = build_anechoic_condition_axis(Mc, ... 
@@ -132,9 +131,9 @@ Nr, distance, growth_delta, e, e_alpha, w_alpha);
 %% Begin the iteractive process
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Construindo chirp
-time_transient = round(Nr*sqrt(3))/4;
+time_transient = round(Nr*sqrt(3));
 a=40;
-total_time = time_transient + 2; % meia hora = 20*Mc*sqrt(3)
+total_time = 4000; % meia hora = 20*Mc*sqrt(3)
 times = 0 : (total_time - time_transient) - 1;
 initial_frequency = 0;
 frequency_max_lattice = 4*cs/(2*pi*a);
@@ -231,6 +230,31 @@ for ta = 1 : total_time
         %link
     end
 
+
+
+    %% Calculando uma fonte ABC dentro do duto
+    % direita = 0.5
+    if ta == time_transient + 2
+        rho_delta = 0.1;
+        density_source = (rho_l + rho_delta *1);%(0.5 + 0.5*cos(2*pi/10 + pi)));
+        Ux_t = ( (rho_delta*cs/rho_l)*1);%(0.5+0.5*cos(2*pi/10 + pi)));
+        disp('Putting pulse');
+    else
+        density_source = rho_l;
+        Ux_t = 0;
+    end
+    Uy_t = 0;%(0.0001*source_chirp(ta))/sqrt(3) + 0.1*e;
+    point_y = 1;
+    distance_y = height_pipe - 2;
+    point_x = 30;
+    distance_x = 30;
+    direction = 0.5;
+    [sigma_source Ft_source] = build_source_anechoic_axis(Nr, Mc, ...
+    density_source, Ux_t, Uy_t, point_y, ...
+    point_x, distance_x, distance_y, direction, e, e_alpha, w_alpha);
+
+
+
     % Block 5.4
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % Collision (relaxation) step
@@ -244,53 +268,39 @@ for ta = 1 : total_time
         term_force(2:end,:) = e_alpha(link, 2).*(-(rho(2:end,:).*ux(2:end,:).*uy(2:end,:))./radius(2:end,:)) ...
          + e_alpha(link, 1).*(-((rho(2:end,:).*uy(2:end,:).^2)./radius(2:end,:)) - 2.*rho(2:end,:).*visc.*uy(2:end,:)./radius(2:end,:).^2);
      
-         % collide itself
-         if ta <= time_transient + 1
+        % collide itself
+        if ta >= time_transient + 10
             f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + omega_alpha(:,:,link).*feq(:,:,link) ...
          + w_alpha(link)*teta + term_force./K*(e^2) ...
          - sigma_mat9_cima(:,:,link).*(feq(:,:,link) - Ft_cima(:,:,link)) ...
          - sigma_mat9_esquerda(:,:,link).*(feq(:,:,link) - Ft_esquerda(:,:,link)) ...
          - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link));
-            
-         else
-            %% Calculando uma fonte ABC dentro do duto
-            % direita = 0.5
-            density_source = rho_l + 0.1*source_chirp(ta - time_transient);
-            Ux_t = (0.1*source_chirp(ta - time_transient))/sqrt(3);% + 0.1*e;
-            Uy_t = 0;%(0.0001*source_chirp(ta))/sqrt(3) + 0.1*e;
-            point_y = 1;
-            distance_y = 39;
-            point_x = 30;
-            distance_x = 30;
-            direction = 0.5;
-            [sigma_source Ft_source] = build_source_anechoic_axis(Nr, Mc, ...
-            density_source, Ux_t, Uy_t, point_y, ...
-            point_x, distance_x, distance_y, direction, e, e_alpha, w_alpha);
-
+        else
             f(:,:,link) = (1 - omega_alpha(:,:,link)).*f(:,:,link) + omega_alpha(:,:,link).*feq(:,:,link) ...
-             + w_alpha(link)*teta + term_force./K*(e^2) ...
-             - sigma_mat9_cima(:,:,link).*(feq(:,:,link) - Ft_cima(:,:,link)) ...
-             - sigma_mat9_esquerda(:,:,link).*(feq(:,:,link) - Ft_esquerda(:,:,link)) ...
-             - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link)) ...
-             - sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link));
-         end
+         + w_alpha(link)*teta + term_force./K*(e^2) ...
+         - sigma_mat9_cima(:,:,link).*(feq(:,:,link) - Ft_cima(:,:,link)) ...
+         - sigma_mat9_esquerda(:,:,link).*(feq(:,:,link) - Ft_esquerda(:,:,link)) ...
+         - sigma_mat9_direito(:,:,link).*(feq(:,:,link) - Ft_direito(:,:,link)) ...
+         - sigma_source(:,:,link).*(feq(:,:,link) - Ft_source(:,:,link));
+        end
         
+    
     end
 
         
     % Ploting the results in real time   
     %surf(rho-1), view(2), shading flat, axis equal, caxis([-.00001 .00001])
-    if mod(ta, 100) == 0
-        %imagesc(flip(rho-1), [-0.0001 0.0001]); axis equal;
+    if mod(ta, 1) == 0
+        imagesc(flip(rho-1)); axis equal;
         %grid off
-        %pause(.0001)
+        pause(.0001)
         disp('Progresso: ');
         disp((ta/total_time*100));
     end
 
      %% Acquisition Data
     
-    x_probe=170; y_probe=35;
+    x_probe = round(size_pipe/2); y_probe=35;
     % Face data
     
     pressure1(ta) = (mean(rho(2:40, x_probe)-1))*cs2;
